@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "n8n Web Scraper",
+  "version": "1.0",
+  "description": "Extracts page text and sends it to an n8n webhook on click.",
+  "permissions": [
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://*/*", 
+    "http://*/*"
+  ],
+  "action": {
+    "default_title": "Send to n8n"
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+}
