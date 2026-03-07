@@ -33,9 +33,24 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   });
 });
 
+// Helper function to get the URL from Chrome Storage
+async function getWebhookUrl() {
+  return new Promise((resolve) => {
+    chrome.storage.sync.get(['webhookUrl'], (result) => {
+      resolve(result.webhookUrl);
+    });
+  });
+}
+
 // 2. The Fetch Function (Immune to Service Worker timeouts)
 async function processWithN8n(actionType, targetText, contextText, url, title) {
-  const webhookUrl = "http://localhost:5678/webhook/21cdf2aa-6f97-4fe4-b886-334858415a39"; 
+  // Fetch the dynamic URL from storage
+  const webhookUrl = await getWebhookUrl();
+
+  // Failsafe if the user hasn't configured it yet
+  if (!webhookUrl) {
+    return marked.parse("❌ **Configuration Missing:** Please right-click the extension icon, click **Options**, and save your n8n Webhook URL.");
+  }
 
   try {
     const response = await fetch(webhookUrl, {

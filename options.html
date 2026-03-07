@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>n8n AI Tool Settings</title>
+  <style>
+    body { font-family: -apple-system, sans-serif; padding: 20px; width: 350px; background-color: #1e1e1e; color: #fff; }
+    label { display: block; margin-bottom: 8px; font-weight: bold; }
+    input[type="text"] { width: 100%; padding: 8px; margin-bottom: 15px; box-sizing: border-box; background: #333; color: #fff; border: 1px solid #555; border-radius: 4px; }
+    button { background-color: #00aaee; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold; }
+    button:hover { background-color: #0088cc; }
+    #status { margin-top: 15px; color: #44cc44; font-size: 14px; text-align: center; height: 20px;}
+  </style>
+</head>
+<body>
+  <label for="webhookUrl">n8n Production Webhook URL:</label>
+  <input type="text" id="webhookUrl" placeholder="https://your-n8n-instance.com/webhook/..." />
+  <button id="saveBtn">Save Configuration</button>
+  <div id="status"></div>
+
+  <script src="options.js"></script>
+</body>
+</html>
