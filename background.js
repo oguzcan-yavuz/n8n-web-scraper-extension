@@ -3,6 +3,7 @@ chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({ id: "analyze-property", title: "🏠 Analyze Real Estate Ad", contexts: ["page"] });
   chrome.contextMenus.create({ id: "detect-bs-thread", title: "🕵️ Analyze Entire Thread", contexts: ["page"] });
   chrome.contextMenus.create({ id: "detect-bs-targeted", title: "🔎 Detect BS in Selected Text", contexts: ["selection"] });
+  chrome.contextMenus.create({ id: "analyze-hn-full", title: "🧠 Deep Dive HN Article / Comments", contexts: ["page"] });
 });
 
 // 2. Pass the action to the Content Script

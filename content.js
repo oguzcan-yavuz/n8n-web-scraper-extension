@@ -17,14 +17,23 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   let contextText = "";
 
   // Route the text to the correct JSON variables based on the tool
-  if (action === "analyze-property" || action === "detect-bs-thread") {
-    // For whole-page tools, the page IS the content. Context is empty.
-    targetText = fullPageText;
-    contextText = "";
-  } else if (action === "detect-bs-targeted") {
-    // For targeted tools, the highlight is the content. The page is the context.
+  if (action === "detect-bs-targeted") {
     targetText = selectedText;
     contextText = fullPageText;
+  } else {
+    // DEFAULT: For all whole-page tools
+    targetText = fullPageText;
+    contextText = "";
+
+    // --- HACKER NEWS OVERRIDE ---
+    // If we are on Hacker News, innerText strips the actual article link. 
+    // We need to manually extract it from the DOM and append it.
+    if (window.location.hostname === "news.ycombinator.com") {
+      const articleNode = document.querySelector('.titleline a');
+      if (articleNode && articleNode.href) {
+        targetText = `*** ORIGINAL ARTICLE URL: ${articleNode.href} ***\n\n` + targetText;
+      }
+    }
   }
 
   // Fire the fetch asynchronously
