@@ -45,4 +45,3 @@ The backend is a single n8n workflow that routes requests based on the `action` 
 ## 3. Known Quirks & Design Decisions
 * **Why Content Scripts for Fetch:** Service Workers die after ~30 seconds of inactivity. LLM analysis of massive DOMs takes 60-90 seconds. Moving the `fetch` to `content.js` tethers the network request to the active tab, preventing silent `504` timeouts.
 * **DOM Injection over React/Vue:** The UI is vanilla JS injecting a `div` and a `<style>` tag directly into the page. This keeps the extension exceptionally lightweight.
-* **Update Handling:** If the extension updates, previously opened tabs will throw a "Receiving end does not exist" error until they are hard-refreshed, because the new `content.js` hasn't been injected into the stale DOM yet.
