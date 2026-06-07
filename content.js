@@ -4,43 +4,93 @@ let analysisTimerInterval;
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   const { action, selectedText } = request;
 
-  // Show the UI immediately with the timer
-  showLoadingOverlay();
+  // We use an async IIFE because the listener itself cannot be async
+  (async () => {
+    // Show the UI immediately with the timer
+    showLoadingOverlay();
 
-  // Grab the full context directly from the DOM (No truncation!)
-  const fullPageText = document.body.innerText;
-  
-  const url = window.location.href;
-  const title = document.title;
+    // Grab the full context directly from the DOM (No truncation!)
+    const fullPageText = document.body.innerText;
+    
+    const url = window.location.href;
+    const title = document.title;
 
-  let targetText = "";
-  let contextText = "";
+    let targetText = "";
+    let contextText = "";
+    let imagesBase64 = [];
 
-  // Route the text to the correct JSON variables based on the tool
-  if (action === "detect-bs-targeted") {
-    targetText = selectedText;
-    contextText = fullPageText;
-  } else {
-    // DEFAULT: For all whole-page tools
-    targetText = fullPageText;
-    contextText = "";
+    // Route the text to the correct JSON variables based on the tool
+    if (action === "detect-bs-targeted") {
+      targetText = selectedText;
+      contextText = fullPageText;
+    } else {
+      // DEFAULT: For all whole-page tools
+      targetText = fullPageText;
+      contextText = "";
 
-    // --- HACKER NEWS OVERRIDE ---
-    // If we are on Hacker News, innerText strips the actual article link. 
-    // We need to manually extract it from the DOM and append it.
-    if (window.location.hostname === "news.ycombinator.com") {
-      const articleNode = document.querySelector('.titleline a');
-      if (articleNode && articleNode.href) {
-        targetText = `*** ORIGINAL ARTICLE URL: ${articleNode.href} ***\n\n` + targetText;
+      // --- HACKER NEWS OVERRIDE ---
+      if (window.location.hostname === "news.ycombinator.com") {
+        const articleNode = document.querySelector('.titleline a');
+        if (articleNode && articleNode.href) {
+          targetText = `*** ORIGINAL ARTICLE URL: ${articleNode.href} ***\n\n` + targetText;
+        }
       }
     }
-  }
 
-  // Fire the fetch asynchronously
-  processWithN8n(action, targetText, contextText, url, title).then(htmlContent => {
+    // --- REAL ESTATE IMAGE EXTRACTION ---
+    if (action === "analyze-property") {
+      const urls = extractImageUrls();
+      if (urls.length > 0) {
+        try {
+          const response = await chrome.runtime.sendMessage({ action: 'fetch-images-base64', urls });
+          if (response && response.images) {
+            imagesBase64 = response.images;
+          }
+        } catch (error) {
+          console.error("Error fetching images via background script:", error);
+        }
+      }
+    }
+
+    // Fire the fetch
+    const htmlContent = await processWithN8n(action, targetText, contextText, url, title, imagesBase64);
     updateOverlayWithAnalysis(htmlContent);
-  });
+  })();
+
+  return true; // Keep the message channel open for async response
 });
+
+// Helper: Extract significant image URLs from the page
+function extractImageUrls() {
+  const imgs = Array.from(document.querySelectorAll('img'));
+  
+  const uniqueUrls = new Set();
+  
+  imgs.forEach(img => {
+    // Check common lazy-loading attributes
+    const src = img.getAttribute('data-src') || 
+                img.getAttribute('data-original') || 
+                img.getAttribute('data-lazy-src') || 
+                img.src;
+                
+    if (!src || !src.startsWith('http')) return;
+    
+    // Filter out common non-ad images
+    const skipList = ['pixel', 'google-analytics', 'favicon', 'logo', 'icon', 'marker'];
+    if (skipList.some(term => src.toLowerCase().includes(term))) return;
+    
+    // Size check: prioritize larger images
+    const rect = img.getBoundingClientRect();
+    if (rect.width > 200 || rect.height > 200 || img.naturalWidth > 200 || img.naturalHeight > 200) {
+      uniqueUrls.add(src);
+    }
+  });
+
+  // Randomize and take top 5
+  return Array.from(uniqueUrls)
+    .sort(() => 0.5 - Math.random())
+    .slice(0, 5);
+}
 
 // Helper function to get the URL from Chrome Storage
 async function getWebhookUrl() {
@@ -52,7 +102,7 @@ async function getWebhookUrl() {
 }
 
 // 2. The Fetch Function (Immune to Service Worker timeouts)
-async function processWithN8n(actionType, targetText, contextText, url, title) {
+async function processWithN8n(actionType, targetText, contextText, url, title, images = []) {
   // Fetch the dynamic URL from storage
   const webhookUrl = await getWebhookUrl();
 
@@ -71,7 +121,8 @@ async function processWithN8n(actionType, targetText, contextText, url, title) {
         listingUrl: url,
         pageTitle: title,
         content: targetText,
-        pageContext: contextText 
+        pageContext: contextText,
+        images: images
       })
     });
 
